@@ -8,7 +8,8 @@ const moveMessageSchema = z.object({
     payload: z.object({
         move: z.object({
             from: z.string(),
-            to: z.string()
+            to: z.string(),
+            promotion: z.string().optional()
         })
     })
 });

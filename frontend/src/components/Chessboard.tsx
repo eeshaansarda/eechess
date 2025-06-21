@@ -1,25 +1,17 @@
-import { Chess, type Square } from "chess.js";
-import { useState } from "react";
+import { type Square } from "chess.js";
 import { Chessboard as Board } from "react-chessboard";
 
-function Chessboard() {
-    const [game, setGame] = useState(new Chess());
+type Props = {
+    position: string;
+    onMove: (from: Square, to: Square, piece: string) => boolean;
+    playerColor: "w" | "b" | null;
+}
 
-    function onDrop(from: Square, to: Square, piece: any) {
-        const gameCopy = new Chess(game.fen());
-        const move = gameCopy.move({ from, to, promotion: piece[1].toLowerCase() ?? "q" });
-        // pass this move on to socket
-
-        if (move === null) {
-            return false;
-        }
-
-        setGame(gameCopy);
-        return true;
-    }
+function Chessboard({ position, onMove, playerColor }: Props) {
     return <Board
-        position={game.fen()}
-        onPieceDrop={onDrop}
+        position={position}
+        onPieceDrop={onMove}
+        boardOrientation={playerColor === "b" ? "black" : "white"}
         />
 }
 
