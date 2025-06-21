@@ -1,6 +1,21 @@
 import { WebSocket } from "ws";
 import { Game } from "./Game";
 import { INIT_GAME, MOVE } from './messages'
+import { z } from 'zod';
+
+const moveMessageSchema = z.object({
+    type: z.literal(MOVE),
+    payload: z.object({
+        move: z.object({
+            from: z.string(),
+            to: z.string()
+        })
+    })
+});
+
+const initGameMessageSchema = z.object({
+    type: z.literal(INIT_GAME)
+});
 
 export class GameManager {
     private games: Game[];
@@ -38,13 +53,17 @@ export class GameManager {
 
     private addHandler(socket: WebSocket){
         socket.on('message', (data) => {
-            try{
+            try {
                 const message = JSON.parse(data.toString());
-                if(message.type === INIT_GAME) {
+                
+                if (initGameMessageSchema.safeParse(message).success) {
                     this.handleNewGame(socket);
-                } else if(message.type === MOVE) {
+                } else if (moveMessageSchema.safeParse(message).success) {
+                    const parsedMessage = moveMessageSchema.parse(message);
                     const game = this.games.find(game => game.hasPlayer(socket));
-                    if(game) game.makeMove(socket, message.move)
+                    if (game) {
+                        game.makeMove(socket, parsedMessage.payload.move);
+                    }
                 }
             } catch(e) {
                 console.error(e);

@@ -12,7 +12,7 @@ export class Game {
     private player2: WebSocket;
     private board: Chess;
     private moves: Move[];
-    private startTime: Date;
+    //private startTime: Date;
     private onGameOver: (winner: string) => void;
 
     constructor(player1: WebSocket, player2: WebSocket, onGameOver: (winner: string) => void) {
@@ -21,7 +21,7 @@ export class Game {
         this.onGameOver = onGameOver;
         this.board = new Chess();
         this.moves = [];
-        this.startTime = new Date();
+        //this.startTime = new Date();
 
         this.player1.send(JSON.stringify({
             type: INIT_GAME,
