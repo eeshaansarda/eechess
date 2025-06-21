@@ -54,7 +54,11 @@ export class Game {
         }
 
         if (this.board.isGameOver()) {
-            const winner = this.board.turn() === "w" ? "black" : "white";
+            let winner: "white" | "black" | null = null;
+            if (this.board.isCheckmate()) {
+                winner = this.board.turn() === "w" ? "black" : "white";
+            }
+
             this.player1.send(JSON.stringify({
                 type: GAME_OVER,
                 payload: { winner }
@@ -63,7 +67,8 @@ export class Game {
                 type: GAME_OVER,
                 payload: { winner }
             }));
-            this.onGameOver(winner);
+
+            this.onGameOver(winner || "draw");
             return;
         }
 

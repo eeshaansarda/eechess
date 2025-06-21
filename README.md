@@ -19,3 +19,4 @@ Play a move
 - Add chess clock
 - Add spectators
 - Add state management
+- Reconnecting (validation problem, need to add auth)(workaround can be storing user id in the frontend)
