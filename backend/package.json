@@ -12,6 +12,7 @@
   "description": "",
   "dependencies": {
     "@types/ws": "^8.18.1",
+    "chess.js": "^1.4.0",
     "typescript": "^5.8.3",
     "ws": "^8.18.2"
   }
