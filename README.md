@@ -21,8 +21,9 @@ EeChess is a next-generation online chess application that enables players to co
 ## 🚀 Tech Stack
 
 ### Frontend
-- **React 19** - Modern UI framework
+- **React** - Modern UI framework
 - **TypeScript** - Type-safe development
+- **Zustand** - State management
 - **Tailwind CSS** - Utility-first CSS framework
 - **React Chessboard** - Professional chess board component
 - **Vite** - Fast build tool and dev server
@@ -150,7 +151,7 @@ The application uses WebSocket messages for real-time communication:
 
 - [ ] **Chess Clock** - Add time controls for games
 - [ ] **Spectators** - Allow users to watch ongoing games
-- [ ] **State Management** - Implement proper game state management
+- [x] **State Management** - Implement proper game state management
 - [ ] **Authentication** - User accounts and persistent sessions
 - [ ] **Reconnection** - Handle connection drops gracefully
 - [ ] **Game History** - Save and replay completed games
