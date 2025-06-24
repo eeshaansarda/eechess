@@ -3,23 +3,27 @@ import { Game } from "./Game.js";
 import { MSG } from '@eechess/shared'
 import { z } from 'zod';
 
-const moveMessageSchema = z.object({
-    type: z.literal(MSG.MAKE_MOVE),
-    payload: z.object({
-        move: z.object({
-            from: z.string(),
-            to: z.string(),
-            promotion: z.string().optional()
+const messageSchema = z.discriminatedUnion("type", [
+    z.object({
+        type: z.literal(MSG.JOIN_GAME),
+        payload: z.object({
+            gameId: z.string().optional()
+        }).optional()
+    }),
+    z.object({
+        type: z.literal(MSG.MAKE_MOVE),
+        payload: z.object({
+            move: z.object({
+                from: z.string(),
+                to: z.string(),
+                promotion: z.string().optional()
+            })
         })
+    }),
+    z.object({
+        type: z.literal(MSG.RESIGN)
     })
-});
-
-const joinGameMessageSchema = z.object({
-    type: z.literal(MSG.JOIN_GAME),
-    payload: z.object({
-        gameId: z.string().optional()
-    }).optional()
-});
+]);
 
 export class GameManager {
     private games: Game[];
@@ -63,16 +67,26 @@ export class GameManager {
     private addHandler(socket: WebSocket){
         socket.on('message', (data) => {
             try {
-                const message = JSON.parse(data.toString());
+                const rawMessage = JSON.parse(data.toString());
+                const message = messageSchema.parse(rawMessage);
                 
-                if (joinGameMessageSchema.safeParse(message).success) {
-                    const parsedMessage = joinGameMessageSchema.parse(message);
-                    this.handleNewGame(socket, parsedMessage.payload?.gameId);
-                } else if (moveMessageSchema.safeParse(message).success) {
-                    const parsedMessage = moveMessageSchema.parse(message);
-                    const game = this.games.find(game => game.hasPlayer(socket));
-                    if (game) {
-                        game.makeMove(socket, parsedMessage.payload.move);
+                switch (message.type) {
+                    case MSG.JOIN_GAME:
+                        this.handleNewGame(socket, message.payload?.gameId);
+                        break;
+                    case MSG.MAKE_MOVE: {
+                        const game = this.games.find(game => game.hasPlayer(socket));
+                        if (game) {
+                            game.makeMove(socket, message.payload.move);
+                        }
+                        break;
+                    }
+                    case MSG.RESIGN: {
+                        const game = this.games.find(game => game.hasPlayer(socket));
+                        if (game) {
+                            game.resign(socket);
+                        }
+                        break;
                     }
                 }
             } catch(e) {

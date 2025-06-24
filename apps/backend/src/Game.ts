@@ -100,6 +100,22 @@ export class Game {
         this.spectators.forEach(s => s.send(JSON.stringify(moveMessage)));
     }
 
+    public resign(resigningSocket: WebSocket) {
+        if (!this.hasPlayer(resigningSocket)) {
+            return;
+        }
+    
+        const winner = resigningSocket === this.player1 ? "black" : "white";
+    
+        const gameOverMessage: GameOverServerMessage = {
+            type: MSG.GAME_OVER,
+            payload: { winner }
+        };
+        this.broadcast(JSON.stringify(gameOverMessage));
+
+        this.onGameOver(winner);
+    }
+
     public removeSpectator(socket: WebSocket) {
         this.spectators = this.spectators.filter(s => s !== socket);
     }

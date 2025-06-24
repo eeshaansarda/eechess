@@ -6,6 +6,7 @@ export const MSG = {
   GAME_STATE: "gameState",
   GAME_OVER: "gameOver",
   ERROR: "error",
+  RESIGN: "resign",
 } as const;
 
 // Client to Server
