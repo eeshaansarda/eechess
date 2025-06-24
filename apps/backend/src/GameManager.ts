@@ -22,6 +22,9 @@ const messageSchema = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal(MSG.RESIGN)
+    }),
+    z.object({
+        type: z.literal(MSG.RECONNECT)
     })
 ]);
 
@@ -29,24 +32,42 @@ export class GameManager {
     private games: Game[];
     private pendingUser: User | null;
     private users: User[];
+    private usersByPlayerId: Map<string, User>;
+    private gamesAwaitingReconnection: Map<string, Game>;
 
     constructor() {
         this.games = [];
         this.pendingUser = null;
         this.users = [];
+        this.usersByPlayerId = new Map<string, User>();
+        this.gamesAwaitingReconnection = new Map<string, Game>();
     }
 
     addUser(user: User) {
         this.users.push(user);
+        this.usersByPlayerId.set(user.playerId, user);
         this.addHandler(user);
     }
 
     removeUser(user: User) {
         this.users = this.users.filter(u => u !== user);
+        this.usersByPlayerId.delete(user.playerId);
         
         const game = this.games.find(game => game.hasPlayer(user));
         if (game) {
-            game.playerDisconnected(user);
+            const disconnectedPlayerId = game.playerDisconnected(user);
+            if (disconnectedPlayerId) {
+                this.gamesAwaitingReconnection.set(disconnectedPlayerId, game);
+                // setting a timeout to end the game if the player does not reconnect
+                setTimeout(() => {
+                    if (this.gamesAwaitingReconnection.has(disconnectedPlayerId)) {
+                        console.log(`Game ${game.id} expired due to no reconnection.`);
+                        game.forceEnd(disconnectedPlayerId);
+                        this.gamesAwaitingReconnection.delete(disconnectedPlayerId);
+                        this.games = this.games.filter(g => g.id !== game.id);
+                    }
+                }, 60 * 1000); // 60 seconds
+            }
             return;
         }
 
@@ -72,7 +93,7 @@ export class GameManager {
                 
                 switch (message.type) {
                     case MSG.JOIN_GAME:
-                        this.handleNewGame(user, message.payload?.gameId);
+                        this.handleNewGame(user, message.payload);
                         break;
                     case MSG.MAKE_MOVE: {
                         const game = this.games.find(game => game.hasPlayer(user));
@@ -88,6 +109,10 @@ export class GameManager {
                         }
                         break;
                     }
+                    case MSG.RECONNECT: {
+                        this.handleReconnect(user);
+                        break;
+                    }
                 }
             } catch(e) {
                 console.error(e);
@@ -95,7 +120,20 @@ export class GameManager {
         });
     }
 
-    private handleNewGame(user: User, gameId?: string) {
+    private handleReconnect(user: User) {
+        const game = this.gamesAwaitingReconnection.get(user.playerId);
+        if (game) {
+            this.gamesAwaitingReconnection.delete(user.playerId);
+            game.reconnectPlayer(user.playerId, user);
+            console.log(`Player ${user.playerId} reconnected to game ${game.id}`);
+        } else {
+            console.log(`No game found for player ${user.playerId} to reconnect to.`);
+        }
+    }
+
+    private handleNewGame(user: User, payload?: { gameId?: string }) {
+        const { gameId } = payload || {};
+
         if (gameId) {
             const game = this.games.find(g => g.id === gameId);
             if (game) {
@@ -108,6 +146,7 @@ export class GameManager {
         }
 
         if(this.pendingUser) {
+            if (this.pendingUser.playerId === user.playerId) return;
             const game = new Game(this.pendingUser, user, (winner: string) => {
                 console.log(`Game over. Winner: ${winner}. Removing game.`);
                 this.games = this.games.filter(g => g !== game);

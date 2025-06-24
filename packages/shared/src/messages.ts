@@ -7,10 +7,11 @@ export const MSG = {
   GAME_OVER: "gameOver",
   ERROR: "error",
   RESIGN: "resign",
+  RECONNECT: "reconnect",
 } as const;
 
 // Client to Server
-export type ClientEvents = "joinGame" | "makeMove" | "resign";
+export type ClientEvents = "joinGame" | "makeMove" | "resign" | "reconnect";
 
 // Server to Client
 export type ServerEvents = "initGame" | "move" | "gameOver" | "gameState";
@@ -26,7 +27,7 @@ export type MovePayload = {
 export type JoinGameClientMessage = {
     type: typeof MSG.JOIN_GAME;
     payload?: {
-        gameId: string;
+        gameId?: string;
     }
 };
 
@@ -41,7 +42,11 @@ export type ResignClientMessage = {
     type: typeof MSG.RESIGN;
 }
 
-export type ClientMessage = JoinGameClientMessage | MakeMoveClientMessage | ResignClientMessage;
+export type ReconnectClientMessage = {
+    type: typeof MSG.RECONNECT;
+}
+
+export type ClientMessage = JoinGameClientMessage | MakeMoveClientMessage | ResignClientMessage | ReconnectClientMessage;
 
 // Server Messages
 export type InitGameServerMessage = {
@@ -49,6 +54,8 @@ export type InitGameServerMessage = {
     payload: {
         color: "white" | "black";
         gameId: string;
+        fen?: string;
+        moves?: MovePayload[];
     }
 }
 

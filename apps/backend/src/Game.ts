@@ -11,6 +11,8 @@ import {
 
 export class Game {
     public id: string;
+    public player1Id: string | null;
+    public player2Id: string | null;
     private player1: User;
     private player2: User;
     private spectators: User[] = [];
@@ -23,6 +25,8 @@ export class Game {
         this.id = Math.random().toString(36).substring(2, 9);
         this.player1 = player1;
         this.player2 = player2;
+        this.player1Id = player1.playerId;
+        this.player2Id = player2.playerId;
         this.onGameOver = onGameOver;
         this.board = new Chess();
         this.moves = [];
@@ -45,6 +49,36 @@ export class Game {
             }
         };
         this.player2.send(JSON.stringify(initGameForPlayer2));
+    }
+
+    reconnectPlayer(playerId: string, newUser: User) {
+        const isPlayer1 = this.player1Id === playerId;
+        const isPlayer2 = this.player2Id === playerId;
+    
+        if (!isPlayer1 && !isPlayer2) {
+            console.error(`Player ${playerId} not part of this game.`);
+            return;
+        }
+
+        if (isPlayer1) {
+            this.player1 = newUser;
+        } else {
+            this.player2 = newUser;
+        }
+    
+        const color = isPlayer1 ? 'white' : 'black';
+        
+        const initMessage: InitGameServerMessage = {
+            type: MSG.INIT_GAME,
+            payload: {
+                color,
+                gameId: this.id,
+                fen: this.board.fen(),
+                moves: this.moves,
+            }
+        };
+        newUser.send(JSON.stringify(initMessage));
+        console.log(`Sent reconnect game state to player ${playerId}`);
     }
 
     hasPlayer(user: User) {
@@ -120,20 +154,29 @@ export class Game {
         this.spectators = this.spectators.filter(s => s !== user);
     }
 
-    public playerDisconnected(disconnectedUser: User) {
-        if (this.hasPlayer(disconnectedUser)) {
-            const winner = disconnectedUser === this.player1 ? "black" : "white";
-
-            const gameOverMessage: GameOverServerMessage = {
-                type: MSG.GAME_OVER,
-                payload: { winner }
-            };
-            this.broadcast(JSON.stringify(gameOverMessage));
-    
-            this.onGameOver(winner);
-        } else {
+    public playerDisconnected(disconnectedUser: User): string | null {
+        if (!this.hasPlayer(disconnectedUser)) {
             this.removeSpectator(disconnectedUser);
+            return null;
         }
+
+        if (this.player1 === disconnectedUser) {
+            return this.player1Id;
+        } else {
+            return this.player2Id;
+        }
+    }
+
+    public forceEnd(disconnectedPlayerId: string) {
+        const winner = this.player1Id === disconnectedPlayerId ? "black" : "white";
+
+        const gameOverMessage: GameOverServerMessage = {
+            type: MSG.GAME_OVER,
+            payload: { winner }
+        };
+        this.broadcast(JSON.stringify(gameOverMessage));
+
+        this.onGameOver(winner);
     }
 
     private isCorrectPlayerTurn(user: User): boolean {

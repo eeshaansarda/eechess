@@ -15,8 +15,10 @@ app.get('/', (req: Request, res: Response) => {
 const wss = new WebSocketServer({ server });
 const gameManager = new GameManager();
 
-wss.on('connection', (ws) => {
-    const user = new User(ws);
+wss.on('connection', (ws, req) => {
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const playerId = url.searchParams.get('playerId');
+    const user = new User(ws, playerId || undefined);
     gameManager.addUser(user);
     console.log("Users connected: ", gameManager.usersSize());
 

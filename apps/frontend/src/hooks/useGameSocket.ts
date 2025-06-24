@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useSocket } from "./useSocket";
 import { useGameStore } from "@/lib/store";
 import { Chess } from "chess.js";
-import { MSG, type ServerMessage, type JoinGameClientMessage, type MakeMoveClientMessage, type ResignClientMessage, type MovePayload } from "@eechess/shared";
+import { MSG, type ServerMessage, type JoinGameClientMessage, type MakeMoveClientMessage, type ResignClientMessage, type ReconnectClientMessage, type MovePayload } from "@eechess/shared";
 
 export function useGameSocket() {
     const socket = useSocket();
@@ -21,6 +21,12 @@ export function useGameSocket() {
     useEffect(() => {
         if (!socket) return;
 
+        const gameId = localStorage.getItem('gameId');
+        if (gameId) {
+            const message: ReconnectClientMessage = { type: MSG.RECONNECT };
+            socket.send(JSON.stringify(message));
+        }
+
         // Check for game ID in URL for spectating
         const urlParams = new URLSearchParams(window.location.search);
         const gameIdFromUrl = urlParams.get('gameId');
@@ -37,16 +43,31 @@ export function useGameSocket() {
                 console.error("Error parsing message from server:", event.data, error);
             }
         };
+
+        const handleStorageChange = (event: StorageEvent) => {
+            if (event.key === 'isSeeking' && event.newValue === 'false') {
+                setIsSeeking(false);
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+        }
     }, [socket, game, setGame, setPlayerColor, setStarted, setIsSeeking, setGameOver, setGameResult, playerColor, setGameId]);
 
     const handleServerMessage = (message: ServerMessage) => {
         switch (message.type) {
             case MSG.INIT_GAME:
-                setGame(new Chess());
+                const newGame = message.payload.fen ? new Chess(message.payload.fen) : new Chess();
+                setGame(newGame);
                 setPlayerColor(message.payload.color === "white" ? "w" : "b");
                 setStarted(true);
                 setIsSeeking(false);
                 setGameId(message.payload.gameId);
+                localStorage.setItem('gameId', message.payload.gameId);
+                localStorage.setItem('isSeeking', 'false');
                 break;
             case MSG.GAME_STATE:
                 setGame(new Chess(message.payload.fen));
@@ -75,6 +96,8 @@ export function useGameSocket() {
     const handleGameOver = (winner: "white" | "black" | null) => {
         setGameOver(true);
         const isDraw = !winner;
+        localStorage.removeItem('gameId');
+        localStorage.removeItem('isSeeking');
 
         if (isDraw) {
             setGameResult("Draw!");
@@ -119,7 +142,15 @@ export function useGameSocket() {
 
     const startGame = () => {
         if (!socket) return;
+
+        const isSeeking = localStorage.getItem('isSeeking');
+        if (isSeeking === 'true') {
+            // another tab is already seeking
+            return;
+        }
+
         setIsSeeking(true);
+        localStorage.setItem('isSeeking', 'true');
         const message: JoinGameClientMessage = { type: MSG.JOIN_GAME };
         socket.send(JSON.stringify(message));
     };
