@@ -12,7 +12,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 
-import { INIT_GAME, MOVE, GAME_OVER } from "@eechess/shared";
+import { MSG, type ServerMessage, type MakeMoveClientMessage, type JoinGameClientMessage, type MovePayload } from "@eechess/shared";
 import { useGameStore } from "@/lib/store";
 
 function Game() {
@@ -37,16 +37,16 @@ function Game() {
         if(!socket) return;
         socket.onmessage = (event) => {
             try {
-                const message = JSON.parse(event.data);
+                const message: ServerMessage = JSON.parse(event.data);
 
                 switch(message.type) {
-                    case INIT_GAME:
+                    case MSG.INIT_GAME:
                         setGame(new Chess());
                         setPlayerColor(message.payload.color === "white" ? "w" : "b");
                         setStarted(true);
                         setIsSeeking(false);
                         break;
-                    case MOVE:
+                    case MSG.MOVE:
                         const move = message.payload;
                         const gameCopy = new Chess(game.fen());
                         if (gameCopy.move(move)) {
@@ -55,7 +55,7 @@ function Game() {
                             console.warn("Invalid move received from server", move);
                         }
                         break;
-                    case GAME_OVER:
+                    case MSG.GAME_OVER:
                         setGameOver(true);
                         const winner = message.payload.winner;
                         const isDraw = !winner;
@@ -86,23 +86,25 @@ function Game() {
         const gameCopy = new Chess(game.fen());
         
         try {
-            const move = gameCopy.move({ from, to, promotion });
-            if (move === null) {
+            const moveResult = gameCopy.move({ from, to, promotion });
+            if (moveResult === null) {
                 return false;
             }
+            const move: MovePayload = { from, to, promotion };
+            const message: MakeMoveClientMessage = { type: MSG.MAKE_MOVE, payload: { move }};
+            socket?.send(JSON.stringify(message));
         } catch (e) {
             console.warn("Invalid move attempted:", { from, to }, e);
             return false;
         }
-
-        socket?.send(JSON.stringify({ type: MOVE, payload: { move: { from, to, promotion } } }));
         setGame(gameCopy);
         return true;
     }
 
     function handleStart() {
         setIsSeeking(true);
-        socket?.send(JSON.stringify({ type: INIT_GAME }));
+        const message: JoinGameClientMessage = { type: MSG.JOIN_GAME };
+        socket?.send(JSON.stringify(message));
     }
 
     function resetAndStart() {

@@ -1,10 +1,10 @@
 import { WebSocket } from "ws";
 import { Game } from "./Game.js";
-import { INIT_GAME, MOVE } from '@eechess/shared'
+import { MSG } from '@eechess/shared'
 import { z } from 'zod';
 
 const moveMessageSchema = z.object({
-    type: z.literal(MOVE),
+    type: z.literal(MSG.MAKE_MOVE),
     payload: z.object({
         move: z.object({
             from: z.string(),
@@ -14,8 +14,8 @@ const moveMessageSchema = z.object({
     })
 });
 
-const initGameMessageSchema = z.object({
-    type: z.literal(INIT_GAME)
+const joinGameMessageSchema = z.object({
+    type: z.literal(MSG.JOIN_GAME)
 });
 
 export class GameManager {
@@ -57,7 +57,7 @@ export class GameManager {
             try {
                 const message = JSON.parse(data.toString());
                 
-                if (initGameMessageSchema.safeParse(message).success) {
+                if (joinGameMessageSchema.safeParse(message).success) {
                     this.handleNewGame(socket);
                 } else if (moveMessageSchema.safeParse(message).success) {
                     const parsedMessage = moveMessageSchema.parse(message);

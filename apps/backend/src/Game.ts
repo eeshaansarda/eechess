@@ -1,17 +1,18 @@
 import { WebSocket } from "ws";
 import { Chess } from "chess.js";
-import { GAME_OVER, INIT_GAME, MOVE } from "@eechess/shared";
-
-interface Move {
-    from: string;
-    to: string;
-}
+import { 
+    MSG, 
+    GameOverServerMessage, 
+    InitGameServerMessage, 
+    MoveServerMessage,
+    MovePayload
+} from "@eechess/shared";
 
 export class Game {
     private player1: WebSocket;
     private player2: WebSocket;
     private board: Chess;
-    private moves: Move[];
+    private moves: MovePayload[];
     //private startTime: Date;
     private onGameOver: (winner: string) => void;
 
@@ -22,27 +23,28 @@ export class Game {
         this.board = new Chess();
         this.moves = [];
         //this.startTime = new Date();
-
-        this.player1.send(JSON.stringify({
-            type: INIT_GAME,
+        const initGameForPlayer1: InitGameServerMessage = {
+            type: MSG.INIT_GAME,
             payload: {
                 color: "white"
             }
-        }));
+        };
+        this.player1.send(JSON.stringify(initGameForPlayer1));
 
-        this.player2.send(JSON.stringify({
-            type: INIT_GAME,
+        const initGameForPlayer2: InitGameServerMessage = {
+            type: MSG.INIT_GAME,
             payload: {
                 color: "black"
             }
-        }));
+        };
+        this.player2.send(JSON.stringify(initGameForPlayer2));
     }
 
     hasPlayer(socket: WebSocket) {
         return this.player1 === socket || this.player2 === socket;
     }
 
-    makeMove(socket: WebSocket, move: Move) {
+    makeMove(socket: WebSocket, move: MovePayload) {
         if (!this.isCorrectPlayerTurn(socket)) return;
 
         try {
@@ -58,35 +60,34 @@ export class Game {
             if (this.board.isCheckmate()) {
                 winner = this.board.turn() === "w" ? "black" : "white";
             }
-
-            this.player1.send(JSON.stringify({
-                type: GAME_OVER,
+            const gameOverMessage: GameOverServerMessage = {
+                type: MSG.GAME_OVER,
                 payload: { winner }
-            }));
-            this.player2.send(JSON.stringify({
-                type: GAME_OVER,
-                payload: { winner }
-            }));
+            };
+            this.player1.send(JSON.stringify(gameOverMessage));
+            this.player2.send(JSON.stringify(gameOverMessage));
 
             this.onGameOver(winner || "draw");
             return;
         }
 
         const opponent = (socket === this.player1) ? this.player2 : this.player1;
-        opponent.send(JSON.stringify({
-            type: MOVE,
+        const moveMessage: MoveServerMessage = {
+            type: MSG.MOVE,
             payload: move
-        }));
+        };
+        opponent.send(JSON.stringify(moveMessage));
     }
 
     public playerDisconnected(disconnectedSocket: WebSocket) {
         const winner = disconnectedSocket === this.player1 ? "black" : "white";
         const opponent = disconnectedSocket === this.player1 ? this.player2 : this.player1;
 
-        opponent.send(JSON.stringify({
-            type: GAME_OVER,
+        const gameOverMessage: GameOverServerMessage = {
+            type: MSG.GAME_OVER,
             payload: { winner }
-        }));
+        };
+        opponent.send(JSON.stringify(gameOverMessage));
 
         this.onGameOver(winner);
     }
