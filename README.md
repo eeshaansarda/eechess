@@ -15,6 +15,7 @@ EeChess is a next-generation online chess application that enables players to co
 - **Type Safety**: Full TypeScript implementation for better development experience
 - **Chess Engine**: Powered by chess.js for accurate game logic and move validation
 - **Cross-platform**: Works on desktop and mobile devices
+- **Spectator Mode**: Allow users to watch ongoing games
 
 ![EeChess Game Interface](images/game.png)
 
@@ -122,10 +123,26 @@ eechess/
 
 The application uses WebSocket messages for real-time communication:
 
-**Initialize Game:**
+**Join Game:**
+Used by a player to join a new or existing game. If `gameId` is provided, they will join as a spectator.
 ```json
 {
-  "type": "init_game"
+  "type": "joinGame",
+  "payload": {
+    "gameId": "some-game-id" 
+  }
+}
+```
+
+**Initialize Game:**
+Sent to a player when they start a new game, assigning them a color.
+```json
+{
+  "type": "initGame",
+  "payload": {
+    "color": "white",
+    "gameId": "some-game-id"
+  }
 }
 ```
 
@@ -133,9 +150,11 @@ The application uses WebSocket messages for real-time communication:
 ```json
 {
   "type": "move",
-  "move": {
-    "from": "e2",
-    "to": "e4"
+  "payload": {
+    "move": {
+      "from": "e2",
+      "to": "e4"
+    }
   }
 }
 ```
@@ -143,14 +162,31 @@ The application uses WebSocket messages for real-time communication:
 **Game Over:**
 ```json
 {
-  "type": "game_over"
+  "type": "gameOver",
+  "payload": {
+    "winner": "white"
+  }
+}
+```
+
+**Game State:**
+Sent to spectators to provide the current state of the game.
+```json
+{
+  "type": "gameState",
+  "payload": {
+    "moves": [],
+    "turn": "w",
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "gameId": "some-game-id"
+  }
 }
 ```
 
 ## 🚧 Roadmap
 
 - [ ] **Chess Clock** - Add time controls for games
-- [ ] **Spectators** - Allow users to watch ongoing games
+- [x] **Spectators** - Allow users to watch ongoing games
 - [x] **State Management** - Implement proper game state management
 - [ ] **Authentication** - User accounts and persistent sessions
 - [ ] **Reconnection** - Handle connection drops gracefully
