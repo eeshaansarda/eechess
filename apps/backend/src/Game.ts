@@ -1,4 +1,4 @@
-import { WebSocket } from "ws";
+import { User } from "./User.js";
 import { Chess } from "chess.js";
 import { 
     MSG, 
@@ -11,15 +11,15 @@ import {
 
 export class Game {
     public id: string;
-    private player1: WebSocket;
-    private player2: WebSocket;
-    private spectators: WebSocket[] = [];
+    private player1: User;
+    private player2: User;
+    private spectators: User[] = [];
     private board: Chess;
     private moves: MovePayload[];
     //private startTime: Date;
     private onGameOver: (winner: string) => void;
 
-    constructor(player1: WebSocket, player2: WebSocket, onGameOver: (winner: string) => void) {
+    constructor(player1: User, player2: User, onGameOver: (winner: string) => void) {
         this.id = Math.random().toString(36).substring(2, 9);
         this.player1 = player1;
         this.player2 = player2;
@@ -47,12 +47,12 @@ export class Game {
         this.player2.send(JSON.stringify(initGameForPlayer2));
     }
 
-    hasPlayer(socket: WebSocket) {
-        return this.player1 === socket || this.player2 === socket;
+    hasPlayer(user: User) {
+        return this.player1 === user || this.player2 === user;
     }
 
-    addSpectator(socket: WebSocket) {
-        this.spectators.push(socket);
+    addSpectator(user: User) {
+        this.spectators.push(user);
         const gameStateMessage: GameStateServerMessage = {
             type: MSG.GAME_STATE,
             payload: {
@@ -62,11 +62,11 @@ export class Game {
                 gameId: this.id
             }
         };
-        socket.send(JSON.stringify(gameStateMessage));
+        user.send(JSON.stringify(gameStateMessage));
     }
 
-    makeMove(socket: WebSocket, move: MovePayload) {
-        if (!this.isCorrectPlayerTurn(socket)) return;
+    makeMove(user: User, move: MovePayload) {
+        if (!this.isCorrectPlayerTurn(user)) return;
 
         try {
             this.board.move(move);
@@ -91,7 +91,7 @@ export class Game {
             return;
         }
 
-        const opponent = (socket === this.player1) ? this.player2 : this.player1;
+        const opponent = (user === this.player1) ? this.player2 : this.player1;
         const moveMessage: MoveServerMessage = {
             type: MSG.MOVE,
             payload: move
@@ -100,12 +100,12 @@ export class Game {
         this.spectators.forEach(s => s.send(JSON.stringify(moveMessage)));
     }
 
-    public resign(resigningSocket: WebSocket) {
-        if (!this.hasPlayer(resigningSocket)) {
+    public resign(resigningUser: User) {
+        if (!this.hasPlayer(resigningUser)) {
             return;
         }
     
-        const winner = resigningSocket === this.player1 ? "black" : "white";
+        const winner = resigningUser === this.player1 ? "black" : "white";
     
         const gameOverMessage: GameOverServerMessage = {
             type: MSG.GAME_OVER,
@@ -116,13 +116,13 @@ export class Game {
         this.onGameOver(winner);
     }
 
-    public removeSpectator(socket: WebSocket) {
-        this.spectators = this.spectators.filter(s => s !== socket);
+    public removeSpectator(user: User) {
+        this.spectators = this.spectators.filter(s => s !== user);
     }
 
-    public playerDisconnected(disconnectedSocket: WebSocket) {
-        if (this.hasPlayer(disconnectedSocket)) {
-            const winner = disconnectedSocket === this.player1 ? "black" : "white";
+    public playerDisconnected(disconnectedUser: User) {
+        if (this.hasPlayer(disconnectedUser)) {
+            const winner = disconnectedUser === this.player1 ? "black" : "white";
 
             const gameOverMessage: GameOverServerMessage = {
                 type: MSG.GAME_OVER,
@@ -132,22 +132,20 @@ export class Game {
     
             this.onGameOver(winner);
         } else {
-            this.removeSpectator(disconnectedSocket);
+            this.removeSpectator(disconnectedUser);
         }
     }
 
-    private isCorrectPlayerTurn(socket: WebSocket): boolean {
-        return (this.board.turn() === 'w' && socket === this.player1) ||
-               (this.board.turn() === 'b' && socket === this.player2);
+    private isCorrectPlayerTurn(user: User): boolean {
+        return (this.board.turn() === 'w' && user === this.player1) ||
+               (this.board.turn() === 'b' && user === this.player2);
     }
 
     private broadcast(message: string) {
         this.player1.send(message);
         this.player2.send(message);
         this.spectators.forEach(s => {
-            if (s.readyState === WebSocket.OPEN) {
-                s.send(message)
-            }
+            s.send(message);
         });
     }
 }

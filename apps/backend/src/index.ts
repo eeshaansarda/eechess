@@ -1,17 +1,31 @@
-import { WebSocketServer, WebSocket } from 'ws';
+import express, { Request, Response } from 'express';
+import http from 'http';
+import { WebSocketServer } from 'ws';
 import { GameManager } from './GameManager.js';
+import { User } from './User.js';
 
+const app = express();
 const PORT = 8080;
-const wss = new WebSocketServer({ port: PORT });
-const gameManager = new GameManager();
+const server = http.createServer(app);
 
-wss.on('connection', (ws: WebSocket) => {
-    // create new user
-    gameManager.addUser(ws);
-
-    ws.on('disconnect', () => gameManager.removeUser(ws));
+app.get('/', (req: Request, res: Response) => {
+    res.send('Hello, world!');
 });
 
-setInterval(() => {
+const wss = new WebSocketServer({ server });
+const gameManager = new GameManager();
+
+wss.on('connection', (ws) => {
+    const user = new User(ws);
+    gameManager.addUser(user);
     console.log("Users connected: ", gameManager.usersSize());
-}, 10000);
+
+    user.on('close', () => {
+        console.log("Connection closed");
+        gameManager.removeUser(user);
+    });
+});
+
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
