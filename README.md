@@ -11,6 +11,7 @@ EeChess is a next-generation online chess application that enables players to co
 ## ✨ Features
 
 - **Real-time Gameplay**: Instant move synchronization using WebSocket connections
+- **Reconnection Logic**: Players can reconnect to an ongoing game if their connection drops
 - **Modern UI**: Beautiful, responsive interface built with React and Tailwind CSS
 - **Type Safety**: Full TypeScript implementation for better development experience
 - **Chess Engine**: Powered by chess.js for accurate game logic and move validation
@@ -134,6 +135,14 @@ Used by a player to join a new or existing game. If `gameId` is provided, they w
 }
 ```
 
+**Reconnect to Game:**
+Used by a player to reconnect to a game they were previously in.
+```json
+{
+  "type": "reconnect"
+}
+```
+
 **Initialize Game:**
 Sent to a player when they start a new game, assigning them a color.
 ```json
@@ -189,7 +198,7 @@ Sent to spectators to provide the current state of the game.
 - [x] **Spectators** - Allow users to watch ongoing games
 - [x] **State Management** - Implement proper game state management
 - [ ] **Authentication** - User accounts and persistent sessions
-- [ ] **Reconnection** - Handle connection drops gracefully
+- [x] **Reconnection** - Handle connection drops gracefully
 - [ ] **Game History** - Save and replay completed games
 - [ ] **Tournaments** - Organize competitive events
 
