@@ -23,7 +23,7 @@ function App() {
           }} className="mt-8 w-full max-w-xs bg-[#b58863] py-6 text-xl font-semibold text-white shadow-md transition-colors hover:bg-[#a57853]">
             Play Online
           </Button>
-          <p className="mt-4 text-slate-400">123 users online</p>
+          <p className="mt-4 text-slate-400">{/*TODO*/}123 users online</p>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { useSocket } from "@/hooks/useSocket";
 import Chessboard from "@/components/Chessboard";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Chess, type Square } from "chess.js";
 import {
     Dialog,
@@ -13,15 +13,25 @@ import {
 } from "@/components/ui/dialog";
 
 import { INIT_GAME, MOVE, GAME_OVER } from "@eechess/shared";
+import { useGameStore } from "@/lib/store";
 
 function Game() {
     const socket = useSocket();
-    const [game, setGame] = useState(new Chess());
-    const [started, setStarted] = useState(false);
-    const [playerColor, setPlayerColor] = useState<"w" | "b" | null>(null);
-    const [isSeeking, setIsSeeking] = useState(false);
-    const [gameOver, setGameOver] = useState(false);
-    const [gameResult, setGameResult] = useState<string | null>(null);
+    const {
+        game,
+        started,
+        playerColor,
+        isSeeking,
+        gameOver,
+        gameResult,
+        setGame,
+        setStarted,
+        setPlayerColor,
+        setIsSeeking,
+        setGameOver,
+        setGameResult,
+        resetGame
+    } = useGameStore();
 
     useEffect(() => {
         if(!socket) return;
@@ -68,7 +78,7 @@ function Game() {
                 console.error("Error parsing message from server:", event.data, error);
             }
         };
-    }, [socket, game]);
+    }, [socket, game, setGame, setPlayerColor, setStarted, setIsSeeking, setGameOver, setGameResult, playerColor]);
 
     function handleMove(from: Square, to: Square, piece: string) {
         if(playerColor !== piece[0] || playerColor !== game.turn()) return false;
@@ -95,10 +105,9 @@ function Game() {
         socket?.send(JSON.stringify({ type: INIT_GAME }));
     }
 
-    function resetGame() {
-        setGameOver(false);
-        setGameResult(null);
-        setGame(new Chess());
+    function resetAndStart() {
+        resetGame();
+        handleStart();
     }
 
     if(!socket) return <div>Connecting...</div>
@@ -113,10 +122,7 @@ function Game() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button onClick={() => {
-                            resetGame();
-                            handleStart();
-                        }}>Play Again</Button>
+                        <Button onClick={resetAndStart}>Play Again</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
