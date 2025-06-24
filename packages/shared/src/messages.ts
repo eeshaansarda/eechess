@@ -24,6 +24,9 @@ export type MovePayload = {
 // Client Messages
 export type JoinGameClientMessage = {
     type: typeof MSG.JOIN_GAME;
+    payload?: {
+        gameId: string;
+    }
 };
 
 export type MakeMoveClientMessage = {
@@ -40,6 +43,7 @@ export type InitGameServerMessage = {
     type: typeof MSG.INIT_GAME;
     payload: {
         color: "white" | "black";
+        gameId: string;
     }
 }
 
@@ -55,4 +59,14 @@ export type GameOverServerMessage = {
     }
 }
 
-export type ServerMessage = InitGameServerMessage | MoveServerMessage | GameOverServerMessage;
+export type GameStateServerMessage = {
+    type: typeof MSG.GAME_STATE;
+    payload: {
+        moves: MovePayload[];
+        turn: "w" | "b";
+        fen: string;
+        gameId: string;
+    }
+}
+
+export type ServerMessage = InitGameServerMessage | MoveServerMessage | GameOverServerMessage | GameStateServerMessage;

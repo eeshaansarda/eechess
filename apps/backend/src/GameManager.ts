@@ -15,7 +15,10 @@ const moveMessageSchema = z.object({
 });
 
 const joinGameMessageSchema = z.object({
-    type: z.literal(MSG.JOIN_GAME)
+    type: z.literal(MSG.JOIN_GAME),
+    payload: z.object({
+        gameId: z.string().optional()
+    }).optional()
 });
 
 export class GameManager {
@@ -37,14 +40,19 @@ export class GameManager {
     removeUser(socket: WebSocket) {
         this.users = this.users.filter(user => user !== socket);
         
-        if (socket === this.pendingUser) {
-            this.pendingUser = null;
-            return;
-        }
-
         const game = this.games.find(game => game.hasPlayer(socket));
         if (game) {
             game.playerDisconnected(socket);
+            return;
+        }
+
+        const spectatorGame = this.games.find(g => g.removeSpectator(socket));
+        if (spectatorGame) {
+            spectatorGame.removeSpectator(socket);
+        }
+
+        if (socket === this.pendingUser) {
+            this.pendingUser = null;
         }
     }
 
@@ -58,7 +66,8 @@ export class GameManager {
                 const message = JSON.parse(data.toString());
                 
                 if (joinGameMessageSchema.safeParse(message).success) {
-                    this.handleNewGame(socket);
+                    const parsedMessage = joinGameMessageSchema.parse(message);
+                    this.handleNewGame(socket, parsedMessage.payload?.gameId);
                 } else if (moveMessageSchema.safeParse(message).success) {
                     const parsedMessage = moveMessageSchema.parse(message);
                     const game = this.games.find(game => game.hasPlayer(socket));
@@ -72,7 +81,18 @@ export class GameManager {
         });
     }
 
-    private handleNewGame(socket: WebSocket) {
+    private handleNewGame(socket: WebSocket, gameId?: string) {
+        if (gameId) {
+            const game = this.games.find(g => g.id === gameId);
+            if (game) {
+                game.addSpectator(socket);
+                console.log(`Spectator added to game ${gameId}`);
+            } else {
+                console.error(`Game not found: ${gameId}`);
+            }
+            return;
+        }
+
         if(this.pendingUser) {
             const game = new Game(this.pendingUser, socket, (winner: string) => {
                 console.log(`Game over. Winner: ${winner}. Removing game.`);

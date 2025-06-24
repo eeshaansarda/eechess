@@ -1,7 +1,7 @@
 import { useSocket } from "@/hooks/useSocket";
 import Chessboard from "@/components/Chessboard";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Chess, type Square } from "chess.js";
 import {
     Dialog,
@@ -11,6 +11,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 import { MSG, type ServerMessage, type MakeMoveClientMessage, type JoinGameClientMessage, type MovePayload } from "@eechess/shared";
 import { useGameStore } from "@/lib/store";
@@ -24,17 +25,28 @@ function Game() {
         isSeeking,
         gameOver,
         gameResult,
+        gameId,
         setGame,
         setStarted,
         setPlayerColor,
         setIsSeeking,
         setGameOver,
         setGameResult,
+        setGameId,
         resetGame
     } = useGameStore();
+    const [spectatorId, setSpectatorId] = useState('');
 
     useEffect(() => {
         if(!socket) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameIdFromUrl = urlParams.get('gameId');
+        if (gameIdFromUrl) {
+            const message: JoinGameClientMessage = { type: MSG.JOIN_GAME, payload: { gameId: gameIdFromUrl } };
+            socket.send(JSON.stringify(message));
+        }
+
         socket.onmessage = (event) => {
             try {
                 const message: ServerMessage = JSON.parse(event.data);
@@ -45,6 +57,14 @@ function Game() {
                         setPlayerColor(message.payload.color === "white" ? "w" : "b");
                         setStarted(true);
                         setIsSeeking(false);
+                        setGameId(message.payload.gameId);
+                        break;
+                    case MSG.GAME_STATE:
+                        setGame(new Chess(message.payload.fen));
+                        setPlayerColor(null);
+                        setStarted(true);
+                        setIsSeeking(false);
+                        setGameId(message.payload.gameId);
                         break;
                     case MSG.MOVE:
                         const move = message.payload;
@@ -78,9 +98,10 @@ function Game() {
                 console.error("Error parsing message from server:", event.data, error);
             }
         };
-    }, [socket, game, setGame, setPlayerColor, setStarted, setIsSeeking, setGameOver, setGameResult, playerColor]);
+    }, [socket, game, setGame, setPlayerColor, setStarted, setIsSeeking, setGameOver, setGameResult, playerColor, setGameId]);
 
     function handleMove(from: Square, to: Square, piece: string) {
+        if(!playerColor) return false;
         if(playerColor !== piece[0] || playerColor !== game.turn()) return false;
         const promotion = piece[1].toLowerCase() ?? "q";
         const gameCopy = new Chess(game.fen());
@@ -102,9 +123,16 @@ function Game() {
     }
 
     function handleStart() {
+        if (!socket) return;
         setIsSeeking(true);
         const message: JoinGameClientMessage = { type: MSG.JOIN_GAME };
         socket?.send(JSON.stringify(message));
+    }
+
+    function handleSpectate() {
+        if (!socket || !spectatorId) return;
+        const message: JoinGameClientMessage = { type: MSG.JOIN_GAME, payload: { gameId: spectatorId } };
+        socket.send(JSON.stringify(message));
     }
 
     function resetAndStart() {
@@ -112,11 +140,11 @@ function Game() {
         handleStart();
     }
 
-    if(!socket) return <div>Connecting...</div>
+    if(!socket) return <div className="flex min-h-svh items-center justify-center bg-slate-900 text-white">Connecting...</div>
     return (
-        <div className="flex min-h-svh items-center justify-center bg-[#262522]">
+        <div className="flex min-h-svh items-center justify-center bg-slate-900">
             <Dialog open={gameOver} onOpenChange={setGameOver}>
-                <DialogContent>
+                <DialogContent className="bg-slate-800 text-white">
                     <DialogHeader>
                         <DialogTitle>{gameResult}</DialogTitle>
                         <DialogDescription>
@@ -124,24 +152,61 @@ function Game() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button onClick={resetAndStart}>Play Again</Button>
+                        <Button onClick={resetAndStart} size="lg" variant="secondary">Play Again</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            <div className="grid w-full max-w-7xl grid-cols-1 gap-8 p-8 md:grid-cols-3">
+            <div className="grid w-full max-w-7xl grid-cols-1 gap-8 p-4 md:grid-cols-3 md:p-8">
                 <div className="md:col-span-2">
                     <Chessboard position={game.fen()} onMove={handleMove} playerColor={playerColor} />
                 </div>
-                <div className="rounded-lg bg-[#1c1b19] p-6 shadow-lg md:col-span-1">
-                    <h2 className="mb-4 text-2xl font-bold text-white">Game Controls</h2>
-                    {
-                    !started && <Button 
-                        onClick={handleStart} 
-                        disabled={isSeeking}
-                        className="w-full bg-[#b58863] py-3 text-lg font-semibold text-white shadow-md transition-colors hover:bg-[#a57853]">
-                        {isSeeking ? "Seeking opponent..." : "Play"}
-                    </Button>
-                    }
+                <div className="flex flex-col gap-6 rounded-lg bg-slate-800 p-6 shadow-lg md:col-span-1">
+                    <h1 className="text-4xl font-bold text-white tracking-tighter">eechess</h1>
+                    
+                    { !started && (
+                        <div className="flex flex-col gap-4">
+                             <Button 
+                                onClick={handleStart} 
+                                disabled={isSeeking}
+                                size="lg"
+                                variant="secondary"
+                                >
+                                {isSeeking ? "Seeking opponent..." : "Play"}
+                            </Button>
+
+                            <div>
+                                <h3 className="mb-2 text-xl font-semibold text-white">Spectate a game</h3>
+                                <div className="flex items-center">
+                                    <Input 
+                                        placeholder="Game ID" 
+                                        className="mr-2 bg-slate-700 border-slate-600 text-white"
+                                        onChange={(e) => setSpectatorId(e.target.value)}
+                                        value={spectatorId}
+                                    />
+                                    <Button onClick={handleSpectate} variant="secondary">Spectate</Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {started && (
+                        <div className="text-white space-y-4">
+                            <div>
+                                <h3 className="text-xl font-semibold">Game ID</h3>
+                                <p className="text-lg select-all font-mono text-slate-400">{gameId}</p>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-semibold">Turn</h3>
+                                <p className="text-lg text-slate-400">{game.turn() === 'w' ? 'White' : 'Black'}</p>
+                            </div>
+                            {playerColor && (
+                                <div>
+                                    <h3 className="text-xl font-semibold">You are</h3>
+                                    <p className="text-lg text-slate-400">{playerColor === 'w' ? 'White' : 'Black'}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

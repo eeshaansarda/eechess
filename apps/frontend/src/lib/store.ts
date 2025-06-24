@@ -8,12 +8,14 @@ interface GameState {
   isSeeking: boolean;
   gameOver: boolean;
   gameResult: string | null;
+  gameId: string | null;
   setGame: (game: Chess) => void;
   setStarted: (started: boolean) => void;
   setPlayerColor: (color: 'w' | 'b' | null) => void;
   setIsSeeking: (isSeeking: boolean) => void;
   setGameOver: (gameOver: boolean) => void;
   setGameResult: (result: string | null) => void;
+  setGameId: (gameId: string | null) => void;
   resetGame: () => void;
 }
 
@@ -24,12 +26,14 @@ export const useGameStore = create<GameState>((set) => ({
   isSeeking: false,
   gameOver: false,
   gameResult: null,
+  gameId: null,
   setGame: (game) => set({ game }),
   setStarted: (started) => set({ started }),
   setPlayerColor: (color) => set({ playerColor: color }),
   setIsSeeking: (isSeeking) => set({ isSeeking }),
   setGameOver: (gameOver) => set({ gameOver }),
   setGameResult: (result) => set({ gameResult: result }),
+  setGameId: (gameId) => set({ gameId }),
   resetGame: () => set({
     game: new Chess(),
     started: false,
@@ -37,5 +41,6 @@ export const useGameStore = create<GameState>((set) => ({
     isSeeking: false,
     gameOver: false,
     gameResult: null,
+    gameId: null,
   }),
 })); 
