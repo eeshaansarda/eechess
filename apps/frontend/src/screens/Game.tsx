@@ -83,9 +83,15 @@ function Game() {
                         if(isDraw) {
                             setGameResult("Draw!");
                         } else {
-                            const playerWon = (winner === "white" && playerColor === "w") || 
-                                              (winner === "black" && playerColor === "b");
-                            setGameResult(`You ${playerWon ? 'won' : 'lost'}!`)
+                            if (playerColor) {
+                                // Player is participating in the game
+                                const playerWon = (winner === "white" && playerColor === "w") || 
+                                                  (winner === "black" && playerColor === "b");
+                                setGameResult(`You ${playerWon ? 'won' : 'lost'}!`);
+                            } else {
+                                // Spectator is watching the game
+                                setGameResult(`${winner === "white" ? "White" : "Black"} won!`);
+                            }
                         }
 
                         setStarted(false);
@@ -140,6 +146,10 @@ function Game() {
         handleStart();
     }
 
+    function goToLobby() {
+        resetGame();
+    }
+
     if(!socket) return <div className="flex min-h-svh items-center justify-center bg-slate-900 text-white">Connecting...</div>
     return (
         <div className="flex min-h-svh items-center justify-center bg-slate-900">
@@ -152,7 +162,11 @@ function Game() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button onClick={resetAndStart} size="lg" variant="secondary">Play Again</Button>
+                        {playerColor ? (
+                            <Button onClick={resetAndStart} size="lg" variant="secondary">Play Again</Button>
+                        ) : (
+                            <Button onClick={goToLobby} size="lg" variant="secondary">Go to Lobby</Button>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
