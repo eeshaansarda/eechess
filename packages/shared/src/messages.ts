@@ -37,7 +37,11 @@ export type MakeMoveClientMessage = {
     }
 };
 
-export type ClientMessage = JoinGameClientMessage | MakeMoveClientMessage;
+export type ResignClientMessage = {
+    type: typeof MSG.RESIGN;
+}
+
+export type ClientMessage = JoinGameClientMessage | MakeMoveClientMessage | ResignClientMessage;
 
 // Server Messages
 export type InitGameServerMessage = {

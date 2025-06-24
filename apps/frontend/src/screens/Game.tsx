@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-import { MSG, type ServerMessage, type MakeMoveClientMessage, type JoinGameClientMessage, type MovePayload } from "@eechess/shared";
+import { MSG, type ServerMessage, type MakeMoveClientMessage, type JoinGameClientMessage, type MovePayload, type ResignClientMessage } from "@eechess/shared";
 import { useGameStore } from "@/lib/store";
 
 function Game() {
@@ -141,9 +141,10 @@ function Game() {
         socket.send(JSON.stringify(message));
     }
 
-    function resetAndStart() {
-        resetGame();
-        handleStart();
+    function handleResign() {
+        if (!socket) return;
+        const message: ResignClientMessage = { type: MSG.RESIGN };
+        socket.send(JSON.stringify(message));
     }
 
     function goToLobby() {
@@ -162,11 +163,7 @@ function Game() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        {playerColor ? (
-                            <Button onClick={resetAndStart} size="lg" variant="secondary">Play Again</Button>
-                        ) : (
-                            <Button onClick={goToLobby} size="lg" variant="secondary">Go to Lobby</Button>
-                        )}
+                        <Button onClick={goToLobby} size="lg" variant="secondary">Go to Lobby</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -218,6 +215,9 @@ function Game() {
                                     <h3 className="text-xl font-semibold">You are</h3>
                                     <p className="text-lg text-slate-400">{playerColor === 'w' ? 'White' : 'Black'}</p>
                                 </div>
+                            )}
+                            {playerColor && (
+                                <Button onClick={handleResign} variant="destructive">Resign</Button>
                             )}
                         </div>
                     )}
