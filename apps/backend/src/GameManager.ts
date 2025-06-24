@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
-import { Game } from "./Game";
-import { INIT_GAME, MOVE } from './messages'
+import { Game } from "./Game.js";
+import { INIT_GAME, MOVE } from '@eechess/shared'
 import { z } from 'zod';
 
 const moveMessageSchema = z.object({
@@ -74,7 +74,7 @@ export class GameManager {
 
     private handleNewGame(socket: WebSocket) {
         if(this.pendingUser) {
-            const game = new Game(this.pendingUser, socket, (winner) => {
+            const game = new Game(this.pendingUser, socket, (winner: string) => {
                 console.log(`Game over. Winner: ${winner}. Removing game.`);
                 this.games = this.games.filter(g => g !== game);
             });

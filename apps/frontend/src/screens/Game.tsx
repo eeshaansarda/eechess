@@ -12,10 +12,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 
-// TODO: Move together, there's code repetition here
-export const INIT_GAME = "init_game";
-export const MOVE = "move";
-export const GAME_OVER = "game_over";
+import { INIT_GAME, MOVE, GAME_OVER } from "@eechess/shared";
 
 function Game() {
     const socket = useSocket();

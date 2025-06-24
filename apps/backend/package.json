@@ -1,6 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "build": "tsc -b",
@@ -11,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@eechess/shared": "workspace:*",
     "@types/ws": "^8.18.1",
     "chess.js": "^1.4.0",
     "typescript": "^5.8.3",
